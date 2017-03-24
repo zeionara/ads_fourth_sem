@@ -45,16 +45,16 @@ GraphAdjRecordPointer generateGraphAdj(HANDLE hGraphAdjHeap, DWORD graphSize, DW
     currentAdjRecord = &graphAdj[i];
     currentAdjRecord->next = NULL;
     vertexName = i;
-    while ((vertexName == i) || (wasTheConnection(&graphAdj[i],vertexName))) vertexName = rand() % (graphSize + 1);
+    while ((vertexName == i) || (wasTheConnection(&graphAdj[i],vertexName))) vertexName = rand() % graphSize;
     currentAdjRecord->weight = rand() % (maxWeight - minWeight) + minWeight;
-    currentAdjRecord->name = vertexName - 1;
+    currentAdjRecord->name = vertexName;
     for (DWORD j = 0; j < graphDensity - 1; j++){
       currentAdjRecord->next = (GraphAdjRecordPointer)HeapAlloc(hGraphAdjHeap, HEAP_ZERO_MEMORY, sizeof(GraphAdjRecord));
       currentAdjRecord = currentAdjRecord->next;
       vertexName = i;
-      while ((vertexName == i) || (wasTheConnection(&graphAdj[i],vertexName))) vertexName = rand() % (graphSize + 1);
+      while ((vertexName == i) || (wasTheConnection(&graphAdj[i],vertexName))) vertexName = rand() % graphSize;
       currentAdjRecord->weight = rand() % (maxWeight - minWeight) + minWeight;
-      currentAdjRecord->name = vertexName - 1;
+      currentAdjRecord->name = vertexName;
       currentAdjRecord->next = NULL;
     }
   }
@@ -159,11 +159,13 @@ int moveDown(DWORD queueLength, int queueWidth, DWORD recordIndex, PriorityQueue
 
   priorityQueue[recordIndex].key = recordKey;
   priorityQueue[recordIndex].name = recordName;
+  cout << "taking min child " << priorityQueue[recordIndex].name << endl;
   indexes[priorityQueue[recordIndex].name] = recordIndex;
   return 0;
 }
 
 int moveUp(DWORD queueLength, int queueWidth, DWORD recordIndex, PriorityQueueRecordPointer priorityQueue, LPDWORD indexes){// asymptotically O(log(n))
+  cout << "rec index is " << recordIndex << endl;
   DWORD recordKey = priorityQueue[recordIndex].key;
   DWORD recordName = priorityQueue[recordIndex].name;
   DWORD parentId = parentIndex(queueLength, queueWidth, recordIndex);
@@ -175,8 +177,8 @@ int moveUp(DWORD queueLength, int queueWidth, DWORD recordIndex, PriorityQueueRe
     recordIndex = parentId;
     parentId = parentIndex(queueLength, queueWidth, recordIndex);
   }
-  priorityQueue[recordIndex].key = recordKey;
-  priorityQueue[recordIndex].name = recordName;
+  priorityQueue[parentId].key = recordKey;
+  priorityQueue[parentId].name = recordName;
   indexes[priorityQueue[recordIndex].name] = recordIndex;
   return 0;
 }
@@ -185,11 +187,8 @@ PriorityQueueRecord takeMininum(DWORD queueLength, int queueWidth, PriorityQueue
   PriorityQueueRecord minRecord;
   minRecord.key = priorityQueue[0].key;
   minRecord.name = priorityQueue[0].name;
-  indexes[priorityQueue[0].name] = queueLength - 1;
   priorityQueue[0].key = priorityQueue[queueLength - 1].key;
   priorityQueue[0].name = priorityQueue[queueLength - 1].name;
-  indexes[priorityQueue[0].name] = 0;
-
   priorityQueue[queueLength - 1].key = minRecord.key;
   priorityQueue[queueLength - 1].name = minRecord.name;
   if (queueLength == 0) return minRecord;
@@ -199,6 +198,7 @@ PriorityQueueRecord takeMininum(DWORD queueLength, int queueWidth, PriorityQueue
 
 int makePriorityQueue(DWORD queueLength, int queueWidth, PriorityQueueRecordPointer priorityQueue, LPDWORD indexes){// asymptotically O(n)
   for (int recordIndex = queueLength - 1; recordIndex >= 0; recordIndex--){// gives O(n)
+    cout << recordIndex << endl;
     moveDown(queueLength, queueWidth, recordIndex, priorityQueue, indexes);// gives O(dlog(n))
   }
   return 0;
@@ -209,13 +209,6 @@ int makePriorityQueue(DWORD queueLength, int queueWidth, PriorityQueueRecordPoin
 //Dijkstra algorythm methods
 //
 //
-int showArr(LPDWORD arr, DWORD length){
-  for (int i = 0; i < length; i++){
-    cout << " " << arr[i];
-  }
-  cout << endl;
-  return 0;
-}
 
 int findShortestWays(DWORD numberOfVertexes, DWORD queueWidth, DWORD startVertex, GraphAdjRecordPointer graphAdj,
                     LPDWORD distances, LPDWORD vertexes, LPDWORD indexes, PriorityQueueRecordPointer priorityQueue){
@@ -229,7 +222,9 @@ int findShortestWays(DWORD numberOfVertexes, DWORD queueWidth, DWORD startVertex
 
   priorityQueue[startVertex].key = 0; // current evaluation of shortest path to the start vertex gives 0 length (because it's beginning of a route)
   DWORD numberOfUncheckedVertexes = numberOfVertexes; // no one vertex checked at the moment
+  showPriorityQueue(priorityQueue,numberOfVertexes,queueWidth);
   makePriorityQueue(numberOfVertexes, queueWidth, priorityQueue, indexes);  // move start vertex to the top (after that vertex with name s has index 0)
+  showPriorityQueue(priorityQueue,numberOfVertexes,queueWidth);
   PriorityQueueRecord minRecord;  // here we will extract vertex with shortest path to that
   DWORD nameOfMinimalVertex;  // here we will keep the name of the vertex with shortest path to that
   GraphAdjRecordPointer linkedVertexAdjRecord; // temporary variable for keeping vertex linked with minimal
@@ -237,27 +232,35 @@ int findShortestWays(DWORD numberOfVertexes, DWORD queueWidth, DWORD startVertex
   DWORD indexOfLinkedVertexInPriorityQueue; // index in priority queue and name are different (for example, vertex s now has index 0, so index[s]=0)
 
   while (numberOfUncheckedVertexes > 0){  // while there are unchecked vertexes (gives O(n))
-    //showArr(indexes, numberOfVertexes);
-    //showPriorityQueue(priorityQueue,numberOfUncheckedVertexes,queueWidth);
+
+    cout << "Let's try to extract mininum" << endl;
+
     minRecord = takeMininum(numberOfUncheckedVertexes, queueWidth, priorityQueue, indexes);  // extract vertex with minimal path to that from the s
-    //showArr(indexes, numberOfVertexes);
-    //showPriorityQueue(priorityQueue,numberOfUncheckedVertexes,queueWidth);
+
     numberOfUncheckedVertexes--;
     nameOfMinimalVertex = minRecord.name; // save name of minimal vertex in a temporary variable
-    //cout << "Select " << nameOfMinimalVertex << " and " << minRecord.key << endl;
+    cout << "Take " << nameOfMinimalVertex << endl;
     distances[nameOfMinimalVertex] = minRecord.key; // update shortest path to minimal vertex in result array
     linkedVertexAdjRecord = &graphAdj[nameOfMinimalVertex];// take first linked vertex in list of vertex with minimal path to that from the s
     while (linkedVertexAdjRecord != NULL){ // while there are linked vertexes
+
       nameOfLinkedVertex = linkedVertexAdjRecord->name; // save name of linked vertex
-      //cout << "Watch " << nameOfLinkedVertex << endl;
+      cout << "And it's neighbour " << nameOfLinkedVertex << endl;
+      cout << "There is value " << priorityQueue[indexes[nameOfLinkedVertex]].key << endl;
+
       indexOfLinkedVertexInPriorityQueue = indexes[nameOfLinkedVertex]; // save index of linked vertex in priority queue
-      //cout << indexOfLinkedVertexInPriorityQueue << endl;
-      //showPriorityQueue(priorityQueue,numberOfVertexes,queueWidth);
+      cout << "I would change it to " << distances[nameOfMinimalVertex] + linkedVertexAdjRecord->weight << endl;
       if (priorityQueue[indexes[nameOfLinkedVertex]].key > distances[nameOfMinimalVertex] + linkedVertexAdjRecord->weight){
           // if the known minimal length of path to the linked vertex more than one which we can make if will go through current minimal vertex
+          cout << "I will change " << indexOfLinkedVertexInPriorityQueue << " which is " << priorityQueue[indexOfLinkedVertexInPriorityQueue].name << endl;
+
           priorityQueue[indexOfLinkedVertexInPriorityQueue].key = distances[nameOfMinimalVertex] + linkedVertexAdjRecord->weight; // decrease length of path
+          cout << "mistaken?" << endl;
+          cout << "before move up" << endl;
+          showPriorityQueue(priorityQueue,numberOfVertexes,queueWidth);
           moveUp(numberOfUncheckedVertexes, queueWidth, indexOfLinkedVertexInPriorityQueue, priorityQueue, indexes); // and move it upper if possibly
-          vertexes[nameOfLinkedVertex] = nameOfMinimalVertex;
+          cout << "after move up" << endl;
+          showPriorityQueue(priorityQueue,numberOfVertexes,queueWidth);
         }
         linkedVertexAdjRecord = linkedVertexAdjRecord->next; // take next linked vertex
     }
@@ -271,12 +274,17 @@ int findShortestWays(DWORD numberOfVertexes, DWORD queueWidth, DWORD startVertex
 //
 //
 
-
+int showArr(LPDWORD arr, DWORD length){
+  for (int i = 0; i < length; i++){
+    cout << " " << arr[i] << endl;
+  }
+  return 0;
+}
 
 int main(int argc, char* argv[]){
   int queueWidth = 2;
-  DWORD graphSize = 100;
-  DWORD graphDensity = 5;
+  DWORD graphSize = 4;
+  DWORD graphDensity = 2;
   DWORD queueLength = graphSize;
 
 
@@ -284,6 +292,7 @@ int main(int argc, char* argv[]){
   HANDLE hGraphAdjHeap = HeapCreate(HEAP_GENERATE_EXCEPTIONS | HEAP_NO_SERIALIZE, graphSize*graphDensity*sizeof(GraphAdjRecord)+1, 0);
 
   GraphAdjRecordPointer graphAdj = generateGraphAdj(hGraphAdjHeap, graphSize, graphDensity, 1, 10);
+  showGraph(graphAdj, graphSize, graphDensity);
 
   PriorityQueueRecordPointer priorityQueue = generatePriorityQueue(hPriorityQueueHeap, queueLength, 0, queueLength, 0, 10);
 
@@ -295,15 +304,18 @@ int main(int argc, char* argv[]){
   //cout << minChildIndex(100, 4, 2, priorityQueue) << endl;
 
   LPDWORD indexes = (LPDWORD)malloc(queueLength*sizeof(DWORD));
+  cout << "Make queue" << endl;
+  showPriorityQueue(priorityQueue,queueLength,queueWidth);
   makePriorityQueue(queueLength,4,priorityQueue,indexes);
+  cout << "Queue made" << endl;
+  showPriorityQueue(priorityQueue,queueLength,queueWidth);
   LPDWORD distances = (LPDWORD)malloc(queueLength*sizeof(DWORD));
   LPDWORD vertexes = (LPDWORD)malloc(queueLength*sizeof(DWORD));
 
   findShortestWays(queueLength, queueWidth, 2, graphAdj, distances, vertexes, indexes, priorityQueue);
   cout << "DISTANCES" << endl;
   showArr(distances, queueLength);
-  cout << "VERTEXES" << endl;
-  showArr(vertexes, queueLength);
-  cout << "INDEXES" << endl;
-  showArr(indexes, queueLength);
+  showPriorityQueue(priorityQueue,queueLength,queueWidth);
+
+  //showPriorityQueue(priorityQueue,queueLength,queueWidth);
 }
