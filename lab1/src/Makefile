@@ -1,6 +1,8 @@
+#rmdir /s /q data
+#mkdir data
 .PHONY: all run clean makedirs rewindbuild quick_rerun compile_filegen compile_filehash
 
-all: makedirs compile_filegen compile_filehash run
+all: rewindbuild compile_filegen compile_filehash
 
 rerun: clean makedirs run
 
@@ -18,11 +20,11 @@ run: main.cpp
 
 makedirs:
 	mkdir build
-	mkdir data
+
 
 clean:
 	rmdir /s /q build
-	rmdir /s /q data
+
 
 rewindbuild:
 	rmdir /s /q build

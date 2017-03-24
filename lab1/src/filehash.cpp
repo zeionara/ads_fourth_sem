@@ -14,6 +14,14 @@ int getHashCode(const char* identifier){
   return (int(identifier[0]) + int(identifier[1]) + int(identifier[strlen(identifier)-1]));
 }
 
+int getSumEx(int number){
+  int sum = 0;
+  for (int i = 1; i <= number; i++){
+    sum+=i;
+  };
+  return sum;
+}
+
 hashTableEntry* getHashTable(const char* fileName, int size, int maxlength){
     char identifier[maxlength];
     hashTableEntry* hashTable = new hashTableEntry[size];
@@ -29,9 +37,10 @@ hashTableEntry* getHashTable(const char* fileName, int size, int maxlength){
     if (identifiers == NULL){
       return NULL;
     }
-
+    int numOfElements = 0;
     while (identifiers){
       identifiers.getline(identifier, maxlength);
+      numOfElements++;
       hashTableEntry* tableEntry = &hashTable[getHashCode(identifier)];
       while ((*tableEntry).next != 0){
         tableEntry = (*tableEntry).next;
@@ -51,13 +60,18 @@ hashTableEntry* getHashTable(const char* fileName, int size, int maxlength){
     }
 
     int sum = 0;
+    int bigsum = 0;
     for (int i = 0; i < size; i++){
       sum += numOfCollisions[i];
+      bigsum += getSumEx(numOfCollisions[i]);
     }
 
-    cout << "Average number of collisions (compares to find element): " << (float)sum/counter << endl;
+    cout << "Average number of collisions : " << sum/counter << endl;
+    cout << "Average number of compares : " << bigsum/numOfElements << endl;
     return hashTable;
 }
+
+
 
 hashTableEntry* searchEntry(const char* identifier, hashTableEntry* hashTable){
   int counter = 1;
