@@ -44,7 +44,6 @@ GraphAdjRecordPointer generateGraphAdj(HANDLE hGraphAdjHeap, DWORD graphSize, DW
   for (DWORD i = 0; i < graphSize; i++){  // for each v
     currentAdjRecord = &graphAdj[i];
     currentAdjRecord->next = NULL;
-    if (graphDensity == 0) continue;
     vertexName = i;
     while ((vertexName == i) || (wasTheConnection(&graphAdj[i],vertexName))) vertexName = rand() % (graphSize + 1);
     currentAdjRecord->weight = rand() % (maxWeight - minWeight) + minWeight;
@@ -231,12 +230,12 @@ int findShortestWays(DWORD numberOfVertexes, DWORD queueWidth, DWORD startVertex
   priorityQueue[startVertex].key = 0; // current evaluation of shortest path to the start vertex gives 0 length (because it's beginning of a route)
   DWORD numberOfUncheckedVertexes = numberOfVertexes; // no one vertex checked at the moment
   makePriorityQueue(numberOfVertexes, queueWidth, priorityQueue, indexes);  // move start vertex to the top (after that vertex with name s has index 0)
-
   PriorityQueueRecord minRecord;  // here we will extract vertex with shortest path to that
   DWORD nameOfMinimalVertex;  // here we will keep the name of the vertex with shortest path to that
   GraphAdjRecordPointer linkedVertexAdjRecord; // temporary variable for keeping vertex linked with minimal
   DWORD nameOfLinkedVertex; // temporary variable for keeping linked vertex's name
   DWORD indexOfLinkedVertexInPriorityQueue; // index in priority queue and name are different (for example, vertex s now has index 0, so index[s]=0)
+
   while (numberOfUncheckedVertexes > 0){  // while there are unchecked vertexes (gives O(n))
     //showArr(indexes, numberOfVertexes);
     //showPriorityQueue(priorityQueue,numberOfUncheckedVertexes,queueWidth);
@@ -248,9 +247,7 @@ int findShortestWays(DWORD numberOfVertexes, DWORD queueWidth, DWORD startVertex
     //cout << "Select " << nameOfMinimalVertex << " and " << minRecord.key << endl;
     distances[nameOfMinimalVertex] = minRecord.key; // update shortest path to minimal vertex in result array
     linkedVertexAdjRecord = &graphAdj[nameOfMinimalVertex];// take first linked vertex in list of vertex with minimal path to that from the s
-    if (linkedVertexAdjRecord->weight == 0) continue;
     while (linkedVertexAdjRecord != NULL){ // while there are linked vertexes (gives O(m/n))
-
       nameOfLinkedVertex = linkedVertexAdjRecord->name; // save name of linked vertex
       //cout << "Watch " << nameOfLinkedVertex << endl;
       indexOfLinkedVertexInPriorityQueue = indexes[nameOfLinkedVertex]; // save index of linked vertex in priority queue
@@ -259,59 +256,10 @@ int findShortestWays(DWORD numberOfVertexes, DWORD queueWidth, DWORD startVertex
       if (priorityQueue[indexes[nameOfLinkedVertex]].key > distances[nameOfMinimalVertex] + linkedVertexAdjRecord->weight){
           // if the known minimal length of path to the linked vertex more than one which we can make if will go through current minimal vertex
           priorityQueue[indexOfLinkedVertexInPriorityQueue].key = distances[nameOfMinimalVertex] + linkedVertexAdjRecord->weight; // decrease length of path
-
           moveUp(numberOfUncheckedVertexes, queueWidth, indexOfLinkedVertexInPriorityQueue, priorityQueue, indexes); // and move it upper if possibly (gives O(logn))
           vertexes[nameOfLinkedVertex] = nameOfMinimalVertex;
         }
-
         linkedVertexAdjRecord = linkedVertexAdjRecord->next; // take next linked vertex
-    }
-
-  }
-  return 0;
-}
-
-int findShortestWaysByMarks(DWORD numberOfVertexes, DWORD queueWidth, DWORD startVertex, GraphAdjRecordPointer graphAdj, LPDWORD distances, LPDWORD vertexes, DWORD graphDensity){
-  LPDWORD concludings = (LPDWORD)malloc(numberOfVertexes*sizeof(DWORD)); //concludings[i] shows is shortest path builded for the vertex i
-  for (int i = 0; i < numberOfVertexes; i++){
-    distances[i] = 0xffffffff;
-    vertexes[i] = numberOfVertexes;
-    concludings[i] = 0;
-  }
-  distances[startVertex] = 0;
-  DWORD numberOfUncheckedVertexes = numberOfVertexes; // no one vertex checked at the moment
-  DWORD nameOfFirstUncheckedVertex;
-  DWORD nameOfOneUncheckedVertex;
-  DWORD nameOfAnotherUncheckedVertex;
-  DWORD nameOfLinkedVertex;
-  GraphAdjRecordPointer linkedVertexAdjRecord;
-  while (numberOfUncheckedVertexes > 0){  // while there are unchecked vertexes (gives O(n))
-
-    nameOfFirstUncheckedVertex = 0;
-    while (concludings[nameOfFirstUncheckedVertex] != 0) nameOfFirstUncheckedVertex++;
-    nameOfOneUncheckedVertex = nameOfFirstUncheckedVertex;
-    for (DWORD nameOfAnotherUncheckedVertex = nameOfOneUncheckedVertex + 1; nameOfAnotherUncheckedVertex < numberOfVertexes; nameOfAnotherUncheckedVertex++){
-      if (concludings[nameOfAnotherUncheckedVertex] == 0){
-        if (distances[nameOfOneUncheckedVertex] > distances[nameOfAnotherUncheckedVertex]){
-          nameOfOneUncheckedVertex = nameOfAnotherUncheckedVertex;
-        }
-      }
-    }
-    //after O(n) got name of unchecked vertex having minimal distance
-
-    concludings[nameOfOneUncheckedVertex] = 1;
-    numberOfUncheckedVertexes--;
-    linkedVertexAdjRecord = &graphAdj[nameOfOneUncheckedVertex];// take first linked vertex in list of vertex with minimal path to that from the s
-    if (linkedVertexAdjRecord->weight == 0) continue;
-    while (linkedVertexAdjRecord != NULL){
-      nameOfLinkedVertex = linkedVertexAdjRecord->name;
-      if (concludings[nameOfLinkedVertex] == 0){
-        if (distances[nameOfLinkedVertex] > distances[nameOfOneUncheckedVertex] + linkedVertexAdjRecord->weight){
-          distances[nameOfLinkedVertex] = distances[nameOfOneUncheckedVertex] + linkedVertexAdjRecord->weight;
-          vertexes[nameOfLinkedVertex] = nameOfOneUncheckedVertex;
-        }
-      }
-      linkedVertexAdjRecord = linkedVertexAdjRecord->next;
     }
   }
   return 0;
@@ -323,48 +271,39 @@ int findShortestWaysByMarks(DWORD numberOfVertexes, DWORD queueWidth, DWORD star
 //
 //
 
+
+
 int main(int argc, char* argv[]){
-
-
-  ofstream out("log.txt");
-  cout.rdbuf(out.rdbuf()); //redirect std::cout to out.txt!
-
   int queueWidth = 2;
   DWORD graphSize = 100;
   DWORD graphDensity = 5;
   DWORD queueLength = graphSize;
 
-  DWORD numberOfVertexes = 10000 + 1;
-  DWORD maxNumberOfEdges = 10000000;
-  DWORD minNumberOfEdges = 0;
-  DWORD stepNumberOfEdges = 100000;
 
-  HANDLE hPriorityQueueHeap = HeapCreate(HEAP_GENERATE_EXCEPTIONS | HEAP_NO_SERIALIZE, numberOfVertexes*sizeof(PriorityQueueRecord)+1, 0);
+  HANDLE hPriorityQueueHeap = HeapCreate(HEAP_GENERATE_EXCEPTIONS | HEAP_NO_SERIALIZE, queueLength*sizeof(PriorityQueueRecord)+1, 0);
+  HANDLE hGraphAdjHeap = HeapCreate(HEAP_GENERATE_EXCEPTIONS | HEAP_NO_SERIALIZE, graphSize*graphDensity*sizeof(GraphAdjRecord)+1, 0);
 
-  LPDWORD indexes = (LPDWORD)malloc(numberOfVertexes*sizeof(DWORD));
-  LPDWORD distances = (LPDWORD)malloc(numberOfVertexes*sizeof(DWORD));
-  LPDWORD vertexes = (LPDWORD)malloc(numberOfVertexes*sizeof(DWORD));
-  HANDLE hGraphAdjHeap;
-  float ffTimeStart = clock()/(float)CLOCKS_PER_SEC;
-  float ffTimeStop;
-  float fTimeStart = 0;
-  float fTimeStop = 0;
-  float fTimeMiddle = 0;
-  for (DWORD numberOfEdges = minNumberOfEdges; numberOfEdges < maxNumberOfEdges; numberOfEdges += stepNumberOfEdges){
-    graphDensity = numberOfEdges / numberOfVertexes;
-    hGraphAdjHeap = HeapCreate(HEAP_GENERATE_EXCEPTIONS | HEAP_NO_SERIALIZE, numberOfEdges*sizeof(GraphAdjRecord)+1, 0);
-    GraphAdjRecordPointer graphAdj = generateGraphAdj(hGraphAdjHeap, numberOfVertexes, graphDensity, 1, 1000000);
-    //showGraph(graphAdj, graphSize, graphDensity)
-    PriorityQueueRecordPointer priorityQueue = generatePriorityQueue(hPriorityQueueHeap, numberOfVertexes, 0, numberOfVertexes, 0, 10);
-    makePriorityQueue(numberOfVertexes,4,priorityQueue,indexes);
-    fTimeStart = clock()/(float)CLOCKS_PER_SEC;
-    findShortestWays(numberOfVertexes, queueWidth, 2, graphAdj, distances, vertexes, indexes, priorityQueue);
-    fTimeMiddle = clock()/(float)CLOCKS_PER_SEC;
-    findShortestWaysByMarks(numberOfVertexes, queueWidth, 2, graphAdj, distances, vertexes, graphDensity);
-    fTimeStop = clock()/(float)CLOCKS_PER_SEC;
-    cout << numberOfEdges << "\t" << fTimeMiddle - fTimeStart << "\t" << fTimeStop - fTimeMiddle << endl;
-    if (hGraphAdjHeap != NULL) HeapDestroy(hGraphAdjHeap);
-  }
-  ffTimeStop = clock()/(float)CLOCKS_PER_SEC;
-  cout << " Finished in " << ffTimeStop - ffTimeStart << "secs " << endl;
+  GraphAdjRecordPointer graphAdj = generateGraphAdj(hGraphAdjHeap, graphSize, graphDensity, 1, 10);
+
+  PriorityQueueRecordPointer priorityQueue = generatePriorityQueue(hPriorityQueueHeap, queueLength, 0, queueLength, 0, 10);
+
+  //showPriorityQueue(priorityQueue,queueLength,queueWidth);
+  //cout << firstChildIndex(100,4,2) << endl;
+  //cout << parentIndex(100, 4, firstChildIndex(100,4,2)) << endl;
+  //cout << parentIndex(100, 4, lastChildIndex(100,4,2)) << endl;
+  //cout << lastChildIndex(100, 4, 2) << endl;
+  //cout << minChildIndex(100, 4, 2, priorityQueue) << endl;
+
+  LPDWORD indexes = (LPDWORD)malloc(queueLength*sizeof(DWORD));
+  makePriorityQueue(queueLength,4,priorityQueue,indexes);
+  LPDWORD distances = (LPDWORD)malloc(queueLength*sizeof(DWORD));
+  LPDWORD vertexes = (LPDWORD)malloc(queueLength*sizeof(DWORD));
+
+  findShortestWays(queueLength, queueWidth, 2, graphAdj, distances, vertexes, indexes, priorityQueue);
+  cout << "DISTANCES" << endl;
+  showArr(distances, queueLength);
+  cout << "VERTEXES" << endl;
+  showArr(vertexes, queueLength);
+  cout << "INDEXES" << endl;
+  showArr(indexes, queueLength);
 }
