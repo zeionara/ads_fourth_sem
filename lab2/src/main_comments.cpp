@@ -382,10 +382,10 @@ int main(int argc, char* argv[]){
   DWORD graphDensity = 5;
   DWORD queueLength = graphSize;
 
-  DWORD numberOfVertexes = 25;
-  DWORD maxNumberOfEdges = 500;
+  DWORD numberOfVertexes = 10;
+  DWORD maxNumberOfEdges = 80;
   DWORD minNumberOfEdges = 0;
-  DWORD stepNumberOfEdges = 25;
+  DWORD stepNumberOfEdges = 10;
 
   HANDLE hPriorityQueueHeap = HeapCreate(HEAP_GENERATE_EXCEPTIONS | HEAP_NO_SERIALIZE, numberOfVertexes*sizeof(PriorityQueueRecord)+1, 0);
 
